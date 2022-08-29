@@ -3,45 +3,34 @@ import './App.css'
 import { PitchDetector } from "pitchy";
 import { ClosestFinger, closestNote, FindNote, GetMinAndMaxGuitarNotes, GetPossibleGuitarNotes } from "../Notes/notes";
 import useWindowDimensions from "../windowDimensions";
+import { bufferLength, dataArray, GetMicData } from "../AudioFuncs/GetMicData";
+import { CurrentClarityPercent, CurrentFreq, CurrentNote, updatePitch, volumeLimit } from "../AudioFuncs/SoundHandler";
 
 
 const App = () =>
 {
     const [Canvas,setCanvas] = useState(null)
     const [Canvas2,setCanvas2] = useState(null)
+
     const {height,width} = useWindowDimensions()
     
-    const minClarityPercent = 95;
-    const inputBufferSize = 2048;
     const canvasRef = useRef(null)
     const canvasRef2 = useRef(null)
+
+    const PossibleGuitarNotes = GetPossibleGuitarNotes()
+
     let notePosi = []
     var dashs = []
     var mesureMedia = false
-
-    var lastFreq 
-    var lastClarity
-    var notePlayin = 'OffLimits' 
-    var notesPlayed = []
-    var [overrideSampleRate, desiredSampleRate, sampleRate] = [false,44100,null];
-    var micStream, analyserNode, detector, inputBuffer;
-    const [MinFreq,MaxFreq] = GetMinAndMaxGuitarNotes({})
-    const PossibleGuitarNotes = GetPossibleGuitarNotes()
-
-    const volumeLimit = 10
+    
     var lastVolume = 0
     var somMedia = 0
     var somHistory = 0
-
-    var bufferLength
-    var dataArray
-    var analyser
 
     let xTest = 0
     let LastxTest = 0
     let drawingNote = ''
 
-    var TpassedSinceLastNote = 0
 
     useEffect(()=>
     {   
@@ -53,15 +42,10 @@ const App = () =>
     {
         if(Canvas)
         {
+            GetMicData()
             setUpdatePitchInterval();
-
-            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => 
-            {
-                micStream = stream;
-                resetAudioContext();
-            });
         }
-    },[Canvas,Canvas2])
+    },[Canvas])
 
     function drawGraph()
     {
@@ -71,14 +55,9 @@ const App = () =>
         const ctx = Canvas.getContext("2d");
         if (!ctx ) return;
 
-        TpassedSinceLastNote++
-
         ctx.clearRect(0, 0, w, h);
 
         const headingHeight = 100;
-
-        const lastPitch = lastFreq ? lastFreq.toFixed(1) : 'NoNote'
-        const lastClarityPercent = lastClarity * 100
         
         ctx.fillStyle = 'rgb(20, 20, 20)';
         ctx.fillRect(0, 0, w, h);
@@ -88,7 +67,7 @@ const App = () =>
         ctx.textAlign = "center";
         //ctx.textBaseline = "middle";
         ctx.fillText(
-            `${notePlayin} ${lastPitch} Hz (${lastClarityPercent.toFixed(1)}%)`,
+            `${CurrentNote} ${CurrentFreq ? CurrentFreq.toFixed(1) : 'NoNote'} Hz (${CurrentClarityPercent? CurrentClarityPercent.toFixed(1) : 0}%)`,
             w / 2,
             headingHeight / 2,
             w
@@ -116,10 +95,9 @@ const App = () =>
         ctx.setLineDash(dashs);
         ctx.lineDashOffset = -5;
         
-        if(lastVolume > volumeLimit && notePlayin != 'OffLimits' && ((drawingNote != notePlayin) ))
+        if(lastVolume > volumeLimit && CurrentNote != 'OffLimits' && ((drawingNote != CurrentNote) ))
         {
-            drawingNote = notePlayin
-           
+            drawingNote = CurrentNote
            
             if(dashs.length>0)
             {
@@ -136,8 +114,8 @@ const App = () =>
             dashs.push(100000)
             dashs.push(12)
             
-            let cf = ClosestFinger(notePlayin,PossibleGuitarNotes)
-            notePosi.push([xTest,notePlayin,cf[1],cf[0]])
+            let cf = ClosestFinger(CurrentNote,PossibleGuitarNotes)
+            notePosi.push([xTest,CurrentNote,cf[1],cf[0]])
 
             LastxTest = xTest
         }
@@ -246,35 +224,6 @@ const App = () =>
     
     }
 
-    function updatePitch() {
-        if (!analyserNode || !detector || !sampleRate || !inputBuffer) return;
-
-        analyserNode.getFloatTimeDomainData(inputBuffer);
-        let pitch = detector.findPitch(inputBuffer, sampleRate)
-
-        analyser.getByteTimeDomainData(dataArray);
-
-        lastFreq = pitch[0]
-        lastClarity = pitch[1]
-
-        let note
-        if(lastFreq>=MinFreq && lastFreq<=MaxFreq && lastVolume >= volumeLimit)
-        {
-            note = FindNote(pitch[0])
-        }
-        else notePlayin = 'OffLimits' 
-
-        if(note!=notePlayin && note!=undefined && ((100 * lastClarity) >= minClarityPercent))
-        {
-            notePlayin = note
-            notesPlayed.push(notePlayin)
-
-            //console.log(TpassedSinceLastNote)
-
-            TpassedSinceLastNote = 0
-        } 
-    }
-
     async function setUpdatePitchInterval() {
 
         function sleep(ms) {
@@ -289,41 +238,7 @@ const App = () =>
         }
     }
 
-    function resetAudioContext() 
-    {
-       // console.log('reseted Audio')
-
-        sampleRate = analyserNode = inputBuffer = null;
-       
-        const audioCtx = new (window.AudioContext)();
-        analyser = audioCtx.createAnalyser();
-
-        const source = audioCtx.createMediaStreamSource(micStream);
-        source.connect(analyser);
-
-        analyser.fftSize = 2048;
-        bufferLength = analyser.frequencyBinCount;
-        dataArray= new Uint8Array(bufferLength);
-        
-        
-        const audioContextOptions = {};
-        if (overrideSampleRate) {
-            audioContextOptions.sampleRate = desiredSampleRate;
-        }
-        //
-        const audioContext = new AudioContext(audioContextOptions);
-        sampleRate = audioContext.sampleRate;
-            
-        analyserNode = new AnalyserNode(audioContext, {
-            fftSize: inputBufferSize,
-        });
-        
-        audioContext.createMediaStreamSource(micStream).connect(analyserNode);
-        detector = PitchDetector.forFloat32Array(analyserNode.fftSize);
-        
-        inputBuffer = new Float32Array(detector.inputLength);
-    }
-
+ 
     return (
         <div style={{margin:10}}>
             <div style={{display:'grid',justifyContent:'flex-end',alignItems:'flex-end'}}>
