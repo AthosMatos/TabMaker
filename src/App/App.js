@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react"
 import './App.css'
-import { PitchDetector } from "pitchy";
-import { ClosestFinger, closestNote, FindNote, GetMinAndMaxGuitarNotes, GetPossibleGuitarNotes } from "../Notes/notes";
+import { ClosestFinger } from "../Notes/notes";
 import useWindowDimensions from "../windowDimensions";
 import { bufferLength, dataArray, GetMicData } from "../AudioFuncs/GetMicData";
 import { CurrentClarityPercent, CurrentFreq, CurrentNote, updatePitch, volumeLimit } from "../AudioFuncs/SoundHandler";
+import { Easyest, FingerPos, GetPossibleGuitarNotes, PossibleGuitarNotes, STDTrastes, STDtunning } from "../AudioFuncs/NoteHandler";
+
 
 
 const App = () =>
@@ -16,8 +17,6 @@ const App = () =>
     
     const canvasRef = useRef(null)
     const canvasRef2 = useRef(null)
-
-    const PossibleGuitarNotes = GetPossibleGuitarNotes()
 
     let notePosi = []
     var dashs = []
@@ -34,6 +33,7 @@ const App = () =>
 
     useEffect(()=>
     {   
+       
         setCanvas(canvasRef.current)
         setCanvas2(canvasRef2.current)
     },[])
@@ -114,8 +114,9 @@ const App = () =>
             dashs.push(100000)
             dashs.push(12)
             
-            let cf = ClosestFinger(CurrentNote,PossibleGuitarNotes)
-            notePosi.push([xTest,CurrentNote,cf[1],cf[0]])
+            const cf = FingerPos()
+
+            notePosi.push([xTest,CurrentNote,cf.casa,cf.corda])
 
             LastxTest = xTest
         }
@@ -158,7 +159,13 @@ const App = () =>
 
         if(xTest==w)
         {
-            //console.log(dashs)
+            let u=[]
+            for(let i=0;i<dataArray.length;i++)
+            {
+                u.push((dataArray[i] / 128.0)-1)
+            }
+            console.log(u[0])
+            
             dashs = []
             notePosi = []
             xTest=0
@@ -194,17 +201,27 @@ const App = () =>
         var x = 0;
         var peak = 0
 
+        //bufferLength = Samples amounts //time wave analysys interval
+        
         for (let i = 0; i < bufferLength; i++) 
         {
-            const v = dataArray[i] / 128.0;
+            const v = dataArray[i] / 128.0; 
 
-            if(v>peak)peak=v
+            if(v>peak)
+            { 
+                peak=v; 
+               
+                if((v - 1) < 0)
+                {
+                    //console.log('v',v - 1)
+                }
+            }
 
             const y = v * h/2;
         
             if (i === 0) 
             {
-                ctx.moveTo(x, y);
+                ctx.moveTo(x, y);//time wave analysys interval
             } else 
             {
                 ctx.lineTo(x, y);

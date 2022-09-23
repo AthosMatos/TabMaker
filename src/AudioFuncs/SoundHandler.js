@@ -43,11 +43,10 @@ export const updatePitch = () =>
         if(NewNote != CurrentNote && NewNote != undefined)
         {
             CurrentNote = NewNote
-           // notesPlayed.push(CurrentNote)
-    
-            //console.log(TpassedSinceLastNote)
-    
             TimePassedSinceLastNote = 0
+
+            //notesPlayed.push(CurrentNote)
+            //console.log(TpassedSinceLastNote)
         } 
     }
     else CurrentNote = 'OffLimits' 
