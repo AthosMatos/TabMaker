@@ -5,8 +5,7 @@ import useWindowDimensions from "../windowDimensions";
 import { bufferLength, dataArray, GetMicData } from "../AudioFuncs/GetMicData";
 import { CurrentClarityPercent, CurrentFreq, CurrentNote, updatePitch, volumeLimit } from "../AudioFuncs/SoundHandler";
 import { Easyest, FingerPos, GetPossibleGuitarNotes, PossibleGuitarNotes, STDTrastes, STDtunning } from "../AudioFuncs/NoteHandler";
-
-
+import FourierColumns from "./FourierColumns";
 
 const App = () =>
 {
@@ -180,6 +179,8 @@ const App = () =>
 
     }
 
+    
+
     function drawGraph2()
     {
         if (!Canvas2) return;
@@ -202,7 +203,7 @@ const App = () =>
         var peak = 0
 
         //bufferLength = Samples amounts //time wave analysys interval
-        
+
         for (let i = 0; i < bufferLength; i++) 
         {
             const v = dataArray[i] / 128.0; 
@@ -210,7 +211,7 @@ const App = () =>
             if(v>peak)
             { 
                 peak=v; 
-               
+                
                 if((v - 1) < 0)
                 {
                     //console.log('v',v - 1)
@@ -228,6 +229,7 @@ const App = () =>
             }
             x += sliceWidth;
         }
+
         if(mesureMedia)
         {
             somHistory++
@@ -275,16 +277,21 @@ const App = () =>
                 >No pitches recorded
                 </canvas>
             </div>
-            <button className="button" onClick={()=>
-            {
-                if(mesureMedia)somMedia = 0
-                mesureMedia = !mesureMedia
-            }}>
-                <div style={{display:'grid'}}>
-                    <text style={{fontSize:22}}>Toogle</text>
-                    <text style={{fontSize:22}}>Medir Media</text>
-                </div>
-            </button>
+
+            <FourierColumns/>
+
+            {/*
+                <button className="button" onClick={()=>
+                {
+                    if(mesureMedia)somMedia = 0
+                    mesureMedia = !mesureMedia
+                }}>
+                    <div style={{display:'grid'}}>
+                        <text style={{fontSize:22}}>Toogle</text>
+                        <text style={{fontSize:22}}>Medir Media</text>
+                    </div>
+                </button>
+            */}
         </div>
         
     )
