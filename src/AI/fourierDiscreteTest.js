@@ -1079,4 +1079,19 @@ export function fourierDiscrete(amplitudeSamples) {
     return values
 }
 
-//console.log(str)
+//console.log(fourierDiscrete([1,1,1,0,0,0,0,0]))
+
+console.log(fourierDiscrete([0,0.707, 1,0.707, 0,-0.707, -1,-0.707]))
+
+const w = (k, m,N) => {
+    return (-(2 * Math.PI * k * m) / (N/2))
+}
+const w1 = (k,N) => {
+    return (-(2 * Math.PI * k) / N)
+}
+
+        ///   k m N
+//console.log(w(1,1,4))
+
+        ///    k N
+//console.log(w1(1,8))
